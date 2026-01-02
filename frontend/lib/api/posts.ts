@@ -35,6 +35,7 @@ export interface QueryParams {
   page?: number;
   limit?: number;
   search?: string;
+  [key: string]: unknown;
 }
 
 export interface PaginatedPosts {
