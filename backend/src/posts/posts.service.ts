@@ -29,9 +29,16 @@ export class PostsService {
   ) {}
 
   async create(userId: string, createPostDto: CreatePostDto): Promise<Post> {
+    const trimmedTitle = createPostDto.title.trim();
+    const trimmedContent = createPostDto.content.trim();
+    
+    if (!trimmedTitle || !trimmedContent) {
+      throw new ForbiddenException('Title and content cannot be empty or whitespace only');
+    }
+    
     const newPost = new this.postModel({
-      title: createPostDto.title.trim(),
-      content: createPostDto.content.trim(),
+      title: trimmedTitle,
+      content: trimmedContent,
       description: createPostDto.description,
       category: createPostDto.category,
       author: userId,
@@ -103,10 +110,18 @@ export class PostsService {
 
     // Trim string fields if they exist
     if (updatePostDto.title) {
-      post.title = updatePostDto.title.trim();
+      const trimmedTitle = updatePostDto.title.trim();
+      if (!trimmedTitle) {
+        throw new ForbiddenException('Title cannot be empty or whitespace only');
+      }
+      post.title = trimmedTitle;
     }
     if (updatePostDto.content) {
-      post.content = updatePostDto.content.trim();
+      const trimmedContent = updatePostDto.content.trim();
+      if (!trimmedContent) {
+        throw new ForbiddenException('Content cannot be empty or whitespace only');
+      }
+      post.content = trimmedContent;
     }
     if (updatePostDto.description !== undefined) {
       post.description = updatePostDto.description;

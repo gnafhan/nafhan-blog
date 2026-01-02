@@ -37,4 +37,18 @@ export class UsersService {
       posts,
     };
   }
+
+  async updateProfilePicture(userId: string, profilePictureUrl: string): Promise<User> {
+    const user = await this.userModel.findByIdAndUpdate(
+      userId,
+      { profilePicture: profilePictureUrl },
+      { new: true },
+    ).exec();
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return user;
+  }
 }

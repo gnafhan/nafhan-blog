@@ -22,8 +22,8 @@ export class PostsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Request() req, @Body() createPostDto: CreatePostDto) {
-    return this.postsService.create(req.user.userId, createPostDto);
+  async create(@Request() req: any, @Body() createPostDto: CreatePostDto) {
+    return this.postsService.create(req.user._id.toString(), createPostDto);
   }
 
   @Get()
@@ -40,16 +40,16 @@ export class PostsController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Request() req,
+    @Request() req: any,
     @Body() updatePostDto: UpdatePostDto,
   ) {
-    return this.postsService.update(id, req.user.userId, updatePostDto);
+    return this.postsService.update(id, req.user._id.toString(), updatePostDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async delete(@Param('id') id: string, @Request() req) {
-    await this.postsService.delete(id, req.user.userId);
+  async delete(@Param('id') id: string, @Request() req: any) {
+    await this.postsService.delete(id, req.user._id.toString());
     return { message: 'Post deleted successfully' };
   }
 }
