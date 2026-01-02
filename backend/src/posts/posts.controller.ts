@@ -52,4 +52,9 @@ export class PostsController {
     await this.postsService.delete(id, req.user._id.toString());
     return { message: 'Post deleted successfully' };
   }
+
+  @Post(':id/clap')
+  async clap(@Param('id') id: string) {
+    return this.postsService.addClap(id);
+  }
 }

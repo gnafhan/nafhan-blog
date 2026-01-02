@@ -41,18 +41,30 @@ export class PostsService {
       content: trimmedContent,
       description: createPostDto.description,
       category: createPostDto.category,
-      author: userId,
+      author: new Types.ObjectId(userId), // Store as ObjectId, not string
     });
     return newPost.save();
   }
 
   async findAll(query: QueryPostsDto): Promise<PaginatedResult<Post>> {
-    const { page = 1, limit = 10, search } = query;
+    const { page = 1, limit = 10, search, category, author } = query;
     const skip = (page - 1) * limit;
 
-    let filter = {};
+    // Build filter
+    const filter: Record<string, unknown> = {};
+    
     if (search) {
-      filter = { $text: { $search: search } };
+      filter.$text = { $search: search };
+    }
+    
+    if (category) {
+      filter.category = category;
+    }
+
+    if (author) {
+      filter.$expr = {
+        $eq: [{ $toString: '$author' }, author],
+      };
     }
 
     const [data, total] = await Promise.all([
@@ -159,5 +171,18 @@ export class PostsService {
       .populate('author', 'name email profilePicture')
       .sort({ createdAt: -1 })
       .exec();
+  }
+
+  async addClap(id: string): Promise<{ claps: number }> {
+    const post = await this.postModel.findById(id).exec();
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    post.claps = (post.claps || 0) + 1;
+    await post.save();
+
+    return { claps: post.claps };
   }
 }

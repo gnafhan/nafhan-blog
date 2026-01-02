@@ -7,15 +7,16 @@ import { Pagination } from '@/components/ui/pagination';
 
 interface PostListProps {
   searchQuery?: string;
+  category?: string;
 }
 
-export function PostList({ searchQuery }: PostListProps) {
+export function PostList({ searchQuery, category }: PostListProps) {
   const [posts, setPosts] = useState<PaginatedPosts | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const limit = 10;
+  const limit = 5;
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -26,6 +27,7 @@ export function PostList({ searchQuery }: PostListProps) {
           page: currentPage,
           limit,
           search: searchQuery,
+          category: category,
         });
         setPosts(data);
       } catch (err) {
@@ -37,12 +39,12 @@ export function PostList({ searchQuery }: PostListProps) {
     };
 
     fetchPosts();
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, category]);
 
-  // Reset to page 1 when search query changes
+  // Reset to page 1 when search query or category changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, category]);
 
   if (loading) {
     return (
@@ -74,7 +76,7 @@ export function PostList({ searchQuery }: PostListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-1">
+      <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-1">
         {posts.data.map((post) => (
           <PostCard key={post._id} post={post} />
         ))}

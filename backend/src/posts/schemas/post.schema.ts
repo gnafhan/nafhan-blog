@@ -21,6 +21,9 @@ export class Post {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   author: Types.ObjectId | User;
 
+  @Prop({ default: 0 })
+  claps: number;
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 

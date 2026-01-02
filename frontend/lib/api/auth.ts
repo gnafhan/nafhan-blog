@@ -45,4 +45,12 @@ export const authApi = {
   getProfile: async (): Promise<User> => {
     return apiClient.get<User>('/auth/profile');
   },
+
+  // Upload profile picture
+  uploadProfilePicture: async (file: File): Promise<User> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return apiClient.postFormData<User>('/users/profile-picture', formData);
+  },
 };

@@ -17,8 +17,32 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Blog Platform",
-  description: "A full-stack blog platform with authentication and rich text editing",
+  title: {
+    default: "NafhanBlog - Share Your Stories",
+    template: "%s | NafhanBlog",
+  },
+  description: "A modern blog platform to share your thoughts, stories, and ideas with the world.",
+  keywords: ["blog", "writing", "stories", "articles", "technology", "programming"],
+  authors: [{ name: "NafhanBlog Team" }],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "NafhanBlog",
+    title: "NafhanBlog - Share Your Stories",
+    description: "A modern blog platform to share your thoughts, stories, and ideas with the world.",
+    images: ["/logo.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NafhanBlog - Share Your Stories",
+    description: "A modern blog platform to share your thoughts, stories, and ideas with the world.",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({

@@ -5,7 +5,7 @@ import { Comment } from '@/lib/api/comments';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
+import { getImageUrl, getInitials } from '@/lib/utils/image';
 
 interface CommentItemProps {
   comment: Comment;
@@ -14,19 +14,24 @@ interface CommentItemProps {
 }
 
 export function CommentItem({ comment, onUpdate, onDelete }: CommentItemProps) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isAuthor = user?.id === comment.author._id;
+  // Safely access author properties with fallbacks
+  const authorName = comment.author?.name || 'Unknown';
+  const authorId = comment.author?._id || '';
+  const authorProfilePicture = getImageUrl(comment.author?.profilePicture);
+  
+  // Check if current user is the author
+  const userId = user?.id || '';
+  const isAuthor = isAuthenticated && !!userId && !!authorId && userId === authorId;
 
   const formattedDate = new Date(comment.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    year: 'numeric',
   });
 
   const wasUpdated = comment.createdAt !== comment.updatedAt;
@@ -63,86 +68,96 @@ export function CommentItem({ comment, onUpdate, onDelete }: CommentItemProps) {
   };
 
   return (
-    <Card>
-      <CardContent className="pt-4">
-        <div className="space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              {comment.author.profilePicture ? (
-                <img
-                  src={comment.author.profilePicture}
-                  alt={comment.author.name}
-                  className="w-8 h-8 rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {comment.author.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div>
-                <p className="font-medium text-sm">{comment.author.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formattedDate}
-                  {wasUpdated && ' (edited)'}
-                </p>
-              </div>
-            </div>
-            {isAuthor && !isEditing && (
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                  disabled={isSubmitting}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDelete}
-                  disabled={isSubmitting}
-                >
-                  Delete
-                </Button>
-              </div>
-            )}
-          </div>
+    <div className="flex gap-4 py-6 border-b last:border-b-0">
+      {/* Avatar */}
+      {authorProfilePicture ? (
+        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={authorProfilePicture}
+            alt={authorName}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
+          <span className="text-sm font-semibold text-primary">
+            {getInitials(authorName)}
+          </span>
+        </div>
+      )}
 
-          {isEditing ? (
-            <div className="space-y-2">
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                placeholder="Edit your comment..."
-                rows={3}
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div>
+            <p className="font-semibold text-sm">{authorName}</p>
+            <p className="text-xs text-muted-foreground">
+              {formattedDate}
+              {wasUpdated && <span className="ml-1">(edited)</span>}
+            </p>
+          </div>
+          
+          {isAuthor && !isEditing && (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(true)}
                 disabled={isSubmitting}
-              />
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleUpdate}
-                  disabled={isSubmitting || !editContent.trim()}
-                >
-                  {isSubmitting ? 'Saving...' : 'Save'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-              </div>
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Edit
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+              >
+                Delete
+              </Button>
             </div>
-          ) : (
-            <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
           )}
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Comment Body */}
+        {isEditing ? (
+          <div className="space-y-3">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Edit your comment..."
+              rows={3}
+              disabled={isSubmitting}
+              className="text-sm resize-none"
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleUpdate}
+                disabled={isSubmitting || !editContent.trim()}
+              >
+                {isSubmitting ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            {comment.content}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

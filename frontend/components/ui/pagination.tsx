@@ -41,21 +41,22 @@ export function Pagination({
   }
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-2">
       <Button
         variant="outline"
         size="sm"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
+        className="w-full sm:w-auto"
       >
         Previous
       </Button>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
         {pages.map((page, index) => {
           if (page === '...') {
             return (
-              <span key={`ellipsis-${index}`} className="px-2">
+              <span key={`ellipsis-${index}`} className="px-2 text-sm">
                 ...
               </span>
             );
@@ -67,6 +68,7 @@ export function Pagination({
               variant={currentPage === page ? 'default' : 'outline'}
               size="sm"
               onClick={() => onPageChange(page as number)}
+              className="min-w-[2.5rem]"
             >
               {page}
             </Button>
@@ -79,6 +81,7 @@ export function Pagination({
         size="sm"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
+        className="w-full sm:w-auto"
       >
         Next
       </Button>

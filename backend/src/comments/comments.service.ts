@@ -31,7 +31,13 @@ export class CommentsService {
       post: new Types.ObjectId(postId),
       author: new Types.ObjectId(userId),
     });
-    return comment.save();
+    const savedComment = await comment.save();
+    
+    // Populate author before returning
+    return this.commentModel
+      .findById(savedComment._id)
+      .populate('author', 'name email profilePicture')
+      .exec() as Promise<Comment>;
   }
 
   async findByPost(postId: string): Promise<Comment[]> {
@@ -68,7 +74,13 @@ export class CommentsService {
     }
     
     comment.updatedAt = new Date();
-    return comment.save();
+    await comment.save();
+    
+    // Populate author before returning
+    return this.commentModel
+      .findById(id)
+      .populate('author', 'name email profilePicture')
+      .exec() as Promise<Comment>;
   }
 
   async delete(id: string, userId: string): Promise<void> {

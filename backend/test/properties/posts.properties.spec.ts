@@ -47,18 +47,26 @@ describe('Posts Properties (Property-Based Tests)', () => {
       .post('/auth/register')
       .send({ name, email, password });
 
+    if (response.status === 201) {
+      return { token: response.body.token, userId: response.body.user._id };
+    }
+
     if (response.status === 409) {
       // User exists, try to login
       const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email, password });
-      return {
-        token: loginResponse.body.token,
-        userId: loginResponse.body.user._id,
-      };
+      
+      if (loginResponse.status === 200 || loginResponse.status === 201) {
+        return {
+          token: loginResponse.body.token,
+          userId: loginResponse.body.user._id,
+        };
+      }
     }
 
-    return { token: response.body.token, userId: response.body.user._id };
+    // If we get here, something went wrong - throw an error with details
+    throw new Error(`Failed to create/login user: ${response.status} - ${JSON.stringify(response.body)}`);
   }
 
   /**
@@ -106,16 +114,17 @@ describe('Posts Properties (Property-Based Tests)', () => {
    */
   it('Property 7: For any post creation request with empty title or content, should return 400 with validation errors', async () => {
     const invalidPostArb = fc.oneof(
-      fc.record({ title: fc.constant(''), content: fc.string({ minLength: 1 }) }),
-      fc.record({ title: fc.string({ minLength: 1 }), content: fc.constant('') }),
+      fc.record({ title: fc.constant(''), content: fc.string({ minLength: 1, maxLength: 100 }).filter(s => /^[\x20-\x7E]+$/.test(s)) }),
+      fc.record({ title: fc.string({ minLength: 1, maxLength: 100 }).filter(s => /^[\x20-\x7E]+$/.test(s)), content: fc.constant('') }),
       fc.record({ title: fc.constant(''), content: fc.constant('') }),
     );
 
     await fc.assert(
       fc.asyncProperty(
         invalidPostArb,
-        fc.emailAddress(),
-        async (invalidPost, email) => {
+        async (invalidPost) => {
+          // Use a unique email for each test run
+          const email = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
           const { token } = await createUserAndGetToken(
             'Test User',
             email,
@@ -418,8 +427,9 @@ describe('Posts Properties (Property-Based Tests)', () => {
     await fc.assert(
       fc.asyncProperty(
         searchTermArb,
-        fc.emailAddress(),
-        async (searchTerm, email) => {
+        async (searchTerm) => {
+          // Use a unique email for each test run
+          const email = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
           const { token } = await createUserAndGetToken(
             'Test User',
             email,

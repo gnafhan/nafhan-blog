@@ -7,6 +7,7 @@ export interface Post {
   content: string;
   description: string;
   category?: string;
+  claps?: number;
   author: {
     _id: string;
     name: string;
@@ -35,6 +36,8 @@ export interface QueryParams {
   page?: number;
   limit?: number;
   search?: string;
+  category?: string;
+  author?: string;
   [key: string]: unknown;
 }
 
@@ -73,5 +76,10 @@ export const postsApi = {
   // Delete post
   delete: async (id: string): Promise<void> => {
     return apiClient.delete(`/posts/${id}`);
+  },
+
+  // Add clap to post
+  clap: async (id: string): Promise<{ claps: number }> => {
+    return apiClient.post<{ claps: number }>(`/posts/${id}/clap`, {});
   },
 };

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { Post, PostDocument } from '../posts/schemas/post.schema';
 
@@ -29,7 +29,20 @@ export class UsersService {
     if (!user) {
       return null;
     }
-    const posts = await this.postModel.find({ author: userId }).exec();
+    
+    // Ensure userId is a string for comparison
+    const userIdStr = userId.toString();
+    
+    // Query posts - use $expr with $toString to handle both string and ObjectId author fields
+    const posts = await this.postModel
+      .find({
+        $expr: {
+          $eq: [{ $toString: '$author' }, userIdStr]
+        }
+      })
+      .populate('author', 'name email profilePicture')
+      .sort({ createdAt: -1 })
+      .exec();
     
     const userObj = (user as any).toObject();
     return {

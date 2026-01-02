@@ -20,7 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateUser: (user: User) => void;
+  updateUser: (user: User | { _id: string; name: string; email: string; profilePicture?: string }) => void;
 }
 
 // Create context
@@ -50,9 +50,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (storedToken && storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
+          
+          // Normalize user data - ensure we have 'id' field
+          // Handle both old format (_id) and new format (id)
+          const normalizedUser: User = {
+            id: parsedUser.id || parsedUser._id,
+            name: parsedUser.name,
+            email: parsedUser.email,
+            profilePicture: parsedUser.profilePicture,
+          };
+          
           setToken(storedToken);
-          setUser(parsedUser);
+          setUser(normalizedUser);
           apiClient.setAuthToken(storedToken);
+          
+          // Update localStorage with normalized format if needed
+          if (!parsedUser.id && parsedUser._id) {
+            localStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
+          }
         } catch {
           // Invalid stored data, clear it
           localStorage.removeItem(TOKEN_KEY);
@@ -69,20 +84,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Login function
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      const response = await apiClient.post<{ user: User; token: string }>(
+      const response = await apiClient.post<{ user: { _id: string; name: string; email: string; profilePicture?: string }; token: string }>(
         '/auth/login',
         { email, password }
       );
 
       const { user: userData, token: authToken } = response;
+      
+      // Normalize user data (backend returns _id, frontend uses id)
+      const normalizedUser: User = {
+        id: userData._id,
+        name: userData.name,
+        email: userData.email,
+        profilePicture: userData.profilePicture,
+      };
 
       // Store in state
-      setUser(userData);
+      setUser(normalizedUser);
       setToken(authToken);
 
       // Store in localStorage
       localStorage.setItem(TOKEN_KEY, authToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(userData));
+      localStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
 
       // Set token in API client
       apiClient.setAuthToken(authToken);
@@ -98,20 +121,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     password: string
   ): Promise<void> => {
     try {
-      const response = await apiClient.post<{ user: User; token: string }>(
+      const response = await apiClient.post<{ user: { _id: string; name: string; email: string; profilePicture?: string }; token: string }>(
         '/auth/register',
         { name, email, password }
       );
 
       const { user: userData, token: authToken } = response;
+      
+      // Normalize user data (backend returns _id, frontend uses id)
+      const normalizedUser: User = {
+        id: userData._id,
+        name: userData.name,
+        email: userData.email,
+        profilePicture: userData.profilePicture,
+      };
 
       // Store in state
-      setUser(userData);
+      setUser(normalizedUser);
       setToken(authToken);
 
       // Store in localStorage
       localStorage.setItem(TOKEN_KEY, authToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(userData));
+      localStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
 
       // Set token in API client
       apiClient.setAuthToken(authToken);
@@ -135,9 +166,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Update user function (for profile updates)
-  const updateUser = (updatedUser: User): void => {
-    setUser(updatedUser);
-    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+  const updateUser = (updatedUser: User | { _id: string; name: string; email: string; profilePicture?: string }): void => {
+    // Normalize user data if it has _id instead of id
+    const normalizedUser: User = 'id' in updatedUser 
+      ? updatedUser as User
+      : {
+          id: (updatedUser as { _id: string })._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          profilePicture: updatedUser.profilePicture,
+        };
+    
+    setUser(normalizedUser);
+    localStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
   };
 
   const value: AuthContextType = {
