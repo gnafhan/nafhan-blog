@@ -24,4 +24,10 @@ export class UpdatePostDto {
   @IsString()
   @IsOptional()
   category?: string;
+
+  // Note: thumbnail is handled via file upload (multipart form data)
+  // The thumbnail URL will be set by the controller after file upload
+  // To remove thumbnail, send removeThumbnail=true in the form data
+  @IsOptional()
+  removeThumbnail?: string; // 'true' to remove existing thumbnail
 }

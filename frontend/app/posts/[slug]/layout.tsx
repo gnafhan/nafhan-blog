@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 interface Post {
   _id: string;
   title: string;
+  slug: string;
   description: string;
   content: string;
   category?: string;
@@ -14,9 +15,9 @@ interface Post {
   };
 }
 
-async function getPost(id: string): Promise<Post | null> {
+async function getPostBySlug(slug: string): Promise<Post | null> {
   try {
-    const res = await fetch(`${API_URL}/posts/${id}`, {
+    const res = await fetch(`${API_URL}/posts/by-slug/${slug}`, {
       cache: 'no-store',
     });
     if (!res.ok) return null;
@@ -29,10 +30,10 @@ async function getPost(id: string): Promise<Post | null> {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
-  const post = await getPost(id);
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
 
   if (!post) {
     return {

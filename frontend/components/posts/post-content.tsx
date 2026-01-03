@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Post } from '@/lib/api/posts';
+import { getImageUrl } from '@/lib/utils/image';
 
 interface PostContentProps {
   post: Post;
@@ -69,21 +70,28 @@ export function PostContent({ post }: PostContentProps) {
               {children}
             </a>
           ),
-          img: ({ src, alt }) => (
-            <span className="block my-6">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src={src} 
-                alt={alt || ''} 
-                className="rounded-lg max-w-full h-auto mx-auto"
-              />
-              {alt && (
-                <span className="block text-center text-sm text-muted-foreground mt-2">
-                  {alt}
-                </span>
-              )}
-            </span>
-          ),
+          img: ({ src, alt }) => {
+            // Handle relative URLs from the backend
+            // src can be string or Blob, we only handle strings
+            const srcString = typeof src === 'string' ? src : '';
+            const imageUrl = srcString ? (getImageUrl(srcString) || srcString) : '';
+            return (
+              <span className="block my-6">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={imageUrl} 
+                  alt={alt || ''} 
+                  className="rounded-lg max-w-full h-auto mx-auto shadow-md"
+                  loading="lazy"
+                />
+                {alt && (
+                  <span className="block text-center text-sm text-muted-foreground mt-2 italic">
+                    {alt}
+                  </span>
+                )}
+              </span>
+            );
+          },
           hr: () => (
             <hr className="my-8 border-border" />
           ),

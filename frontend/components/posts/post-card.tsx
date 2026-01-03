@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { getImageUrl } from '@/lib/utils/image';
 
 interface PostCardProps {
   post: Post;
@@ -40,13 +41,37 @@ export function PostCard({ post }: PostCardProps) {
   const authorName = post.author?.name || 'Unknown Author';
   const authorInitial = authorName.charAt(0).toUpperCase();
   const categoryStyle = post.category ? categoryStyles[post.category] : null;
+  const thumbnailUrl = getImageUrl(post.thumbnail);
 
   // Calculate reading time (rough estimate: 200 words per minute)
   const wordCount = post.content?.split(/\s+/).length || 0;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
+  // Use slug if available, fallback to _id for older posts
+  const postUrl = `/posts/${post.slug || post._id}`;
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 hover:border-primary/20 overflow-hidden">
+      {/* Thumbnail */}
+      {thumbnailUrl ? (
+        <Link href={postUrl} className="block">
+          <div className="aspect-video w-full overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={thumbnailUrl}
+              alt={post.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        </Link>
+      ) : (
+        <Link href={postUrl} className="block">
+          <div className="aspect-video w-full bg-gradient-to-br from-primary/10 via-primary/5 to-muted flex items-center justify-center">
+            <span className="text-4xl opacity-50">📝</span>
+          </div>
+        </Link>
+      )}
+      
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -59,7 +84,7 @@ export function PostCard({ post }: PostCardProps) {
               </Badge>
             )}
             <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors">
-              <Link href={`/posts/${post._id}`} className="hover:underline">
+              <Link href={postUrl} className="hover:underline">
                 {post.title}
               </Link>
             </CardTitle>
@@ -89,7 +114,7 @@ export function PostCard({ post }: PostCardProps) {
       
       <CardFooter className="pt-3 border-t bg-muted/30">
         <div className="flex items-center justify-between w-full">
-          <Link href={`/posts/${post._id}`}>
+          <Link href={postUrl}>
             <Button 
               variant="ghost" 
               size="sm"

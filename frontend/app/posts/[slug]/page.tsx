@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { postsApi, Post } from '@/lib/api/posts';
-import { commentsApi, Comment } from '@/lib/api/comments';
+import { commentsApi, CommentWithReplies } from '@/lib/api/comments';
 import { useAuth } from '@/contexts/auth-context';
 import { PostContent } from '@/components/posts/post-content';
 import { CommentList } from '@/components/comments/comment-list';
@@ -53,11 +53,11 @@ export default function PostDetailPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<CommentWithReplies[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const postId = params.id as string;
+  const slug = params.slug as string;
   
   const getAuthorId = (author: Post['author'] | string | undefined): string => {
     if (!author) return '';
@@ -75,12 +75,12 @@ export default function PostDetailPage() {
         setIsLoading(true);
         setError(null);
 
-        const [postData, commentsData] = await Promise.all([
-          postsApi.getById(postId),
-          commentsApi.getByPost(postId),
-        ]);
-
+        // Fetch post by slug
+        const postData = await postsApi.getBySlug(slug);
         setPost(postData);
+
+        // Fetch comments using the post ID
+        const commentsData = await commentsApi.getByPost(postData._id);
         setComments(commentsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load post');
@@ -89,10 +89,20 @@ export default function PostDetailPage() {
       }
     };
 
-    if (postId) {
+    if (slug) {
       fetchPostAndComments();
     }
-  }, [postId]);
+  }, [slug]);
+
+  // Helper function to count all comments including nested replies
+  const countAllComments = (comments: CommentWithReplies[]): number => {
+    return comments.reduce((total, comment) => {
+      return total + 1 + (comment.replies ? countAllComments(comment.replies) : 0);
+    }, 0);
+  };
+
+  const totalCommentCount = countAllComments(comments);
+
 
   const handleDeletePost = async () => {
     if (!post || !confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
@@ -107,26 +117,80 @@ export default function PostDetailPage() {
 
   const handleEditPost = () => {
     if (!post) return;
-    router.push(`/posts/${post._id}/edit`);
+    router.push(`/posts/${post.slug}/edit`);
   };
 
   const handleCreateComment = async (content: string) => {
-    const newComment = await commentsApi.create(postId, { content });
-    setComments([newComment, ...comments]);
+    if (!post) return;
+    const newComment = await commentsApi.create(post._id, { content });
+    // Add new top-level comment with empty replies array
+    const commentWithReplies: CommentWithReplies = { ...newComment, replies: [] };
+    setComments([commentWithReplies, ...comments]);
+  };
+
+  const handleReplyToComment = async (parentId: string, content: string) => {
+    if (!post) return;
+    const newReply = await commentsApi.create(post._id, { content, parentCommentId: parentId });
+    const replyWithReplies: CommentWithReplies = { ...newReply, replies: [] };
+    
+    // Helper function to add reply to the correct parent in the tree
+    const addReplyToTree = (comments: CommentWithReplies[]): CommentWithReplies[] => {
+      return comments.map(comment => {
+        if (comment._id === parentId) {
+          return {
+            ...comment,
+            replies: [...comment.replies, replyWithReplies]
+          };
+        }
+        if (comment.replies && comment.replies.length > 0) {
+          return {
+            ...comment,
+            replies: addReplyToTree(comment.replies)
+          };
+        }
+        return comment;
+      });
+    };
+    
+    setComments(addReplyToTree(comments));
   };
 
   const handleUpdateComment = async (id: string, content: string) => {
     const updatedComment = await commentsApi.update(id, { content });
-    setComments(
-      comments.map((comment) =>
-        comment._id === id ? updatedComment : comment
-      )
-    );
+    
+    // Helper function to update comment in the tree
+    const updateInTree = (comments: CommentWithReplies[]): CommentWithReplies[] => {
+      return comments.map(comment => {
+        if (comment._id === id) {
+          return { ...comment, ...updatedComment };
+        }
+        if (comment.replies && comment.replies.length > 0) {
+          return {
+            ...comment,
+            replies: updateInTree(comment.replies)
+          };
+        }
+        return comment;
+      });
+    };
+    
+    setComments(updateInTree(comments));
   };
 
   const handleDeleteComment = async (id: string) => {
     await commentsApi.delete(id);
-    setComments(comments.filter((comment) => comment._id !== id));
+    
+    // Helper function to remove comment from the tree
+    const removeFromTree = (comments: CommentWithReplies[]): CommentWithReplies[] => {
+      return comments
+        .filter(comment => comment._id !== id)
+        .map(comment => ({
+          ...comment,
+          replies: comment.replies ? removeFromTree(comment.replies) : []
+        }));
+    };
+    
+    setComments(removeFromTree(comments));
   };
 
   if (isLoading) {
@@ -183,6 +247,7 @@ export default function PostDetailPage() {
   const CategoryIcon = categoryStyle?.icon || FileText;
   const authorName = post.author?.name || 'Unknown Author';
   const authorProfilePicture = getImageUrl(post.author?.profilePicture);
+  const thumbnailUrl = getImageUrl(post.thumbnail);
   const wordCount = post.content?.split(/\s+/).length || 0;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
@@ -191,6 +256,7 @@ export default function PostDetailPage() {
     month: 'long',
     day: 'numeric',
   });
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -203,6 +269,20 @@ export default function PostDetailPage() {
                 <CategoryIcon className="h-3.5 w-3.5" />
                 {post.category}
               </Badge>
+            </div>
+          )}
+
+          {/* Cover Image */}
+          {thumbnailUrl && (
+            <div className="mb-8 -mx-4 md:mx-0">
+              <div className="aspect-video w-full overflow-hidden md:rounded-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={thumbnailUrl}
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
           )}
 
@@ -290,7 +370,7 @@ export default function PostDetailPage() {
           <section className="space-y-8">
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-bold">Responses</h2>
-              <span className="text-muted-foreground">({comments.length})</span>
+              <span className="text-muted-foreground">({totalCommentCount})</span>
             </div>
 
             {isAuthenticated ? (
@@ -319,6 +399,7 @@ export default function PostDetailPage() {
               <div className="space-y-4">
                 <CommentList
                   comments={comments}
+                  onReply={handleReplyToComment}
                   onUpdate={handleUpdateComment}
                   onDelete={handleDeleteComment}
                 />

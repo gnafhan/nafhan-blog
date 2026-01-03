@@ -4,9 +4,11 @@ import { apiClient } from './client';
 export interface Post {
   _id: string;
   title: string;
+  slug: string;
   content: string;
   description: string;
   category?: string;
+  thumbnail?: string;
   claps?: number;
   author: {
     _id: string;
@@ -23,6 +25,7 @@ export interface CreatePostData {
   content: string;
   description?: string;
   category?: string;
+  thumbnail?: File;
 }
 
 export interface UpdatePostData {
@@ -30,6 +33,7 @@ export interface UpdatePostData {
   content?: string;
   description?: string;
   category?: string;
+  thumbnail?: File;
 }
 
 export interface QueryParams {
@@ -51,6 +55,29 @@ export interface PaginatedPosts {
   };
 }
 
+// Helper function to convert post data to FormData
+const toFormData = (data: CreatePostData | UpdatePostData): FormData => {
+  const formData = new FormData();
+  
+  if ('title' in data && data.title !== undefined) {
+    formData.append('title', data.title);
+  }
+  if ('content' in data && data.content !== undefined) {
+    formData.append('content', data.content);
+  }
+  if (data.description !== undefined) {
+    formData.append('description', data.description);
+  }
+  if (data.category !== undefined) {
+    formData.append('category', data.category);
+  }
+  if (data.thumbnail !== undefined) {
+    formData.append('thumbnail', data.thumbnail);
+  }
+  
+  return formData;
+};
+
 // Posts API service
 export const postsApi = {
   // Get all posts with pagination and search
@@ -63,14 +90,21 @@ export const postsApi = {
     return apiClient.get<Post>(`/posts/${id}`);
   },
 
-  // Create new post
-  create: async (data: CreatePostData): Promise<Post> => {
-    return apiClient.post<Post>('/posts', data);
+  // Get single post by slug
+  getBySlug: async (slug: string): Promise<Post> => {
+    return apiClient.get<Post>(`/posts/by-slug/${slug}`);
   },
 
-  // Update post
+  // Create new post (uses FormData for thumbnail support)
+  create: async (data: CreatePostData): Promise<Post> => {
+    const formData = toFormData(data);
+    return apiClient.postFormData<Post>('/posts', formData);
+  },
+
+  // Update post (uses FormData for thumbnail support)
   update: async (id: string, data: UpdatePostData): Promise<Post> => {
-    return apiClient.put<Post>(`/posts/${id}`, data);
+    const formData = toFormData(data);
+    return apiClient.putFormData<Post>(`/posts/${id}`, formData);
   },
 
   // Delete post
