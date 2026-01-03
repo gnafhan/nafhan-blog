@@ -29,24 +29,33 @@ This project is deployed on Ubuntu VPS:
 ## ✨ Features
 
 ### User Management
-- 🔐 JWT-based authentication (Register/Login)
-- 👤 User profile with customizable profile picture
+
+- � JsWT-based authentication (Register/Login)
+- � User profiile with customizable profile picture
 - 🖼️ Profile picture upload with image validation
 
 ### Blog Posts
+
 - 📝 Create, Read, Update, Delete (CRUD) blog posts
+- � SuEO-friendly URLs with auto-generated slugs
 - 🎨 Rich text editor with formatting toolbar (bold, italic, headings, lists, code blocks)
+- �️M Inline image upload in editor
+- 📷 Post thumbnail support
 - 🏷️ Category tagging for posts
-- 🔍 Full-text search functionality
+- � Full-textn search functionality
 - 📄 Pagination for post listings
-- 👏 Medium-style clap feature with animations
+- �  Medium-style clap feature with animations
 
 ### Comments
+
 - 💬 Add comments to posts
+- � Nesited replies (threaded comments)
+- ❤️ Like comments
 - ✏️ Edit and delete your own comments
 - 👤 Author attribution with profile pictures
 
 ### UI/UX
+
 - 🎨 Modern, responsive design with Tailwind CSS
 - 🌙 Clean and intuitive interface
 - 📱 Mobile-friendly layout
@@ -191,34 +200,46 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 ## 📚 API Endpoints
 
 ### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/register` | Register new user |
-| POST | `/auth/login` | Login user |
-| GET | `/auth/profile` | Get current user profile |
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/auth/register` | Register new user | No |
+| POST | `/auth/login` | Login user | No |
+| GET | `/auth/profile` | Get current user profile with posts | Yes |
 
 ### Posts
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/posts` | Get all posts (paginated) |
-| GET | `/posts/:id` | Get single post |
-| POST | `/posts` | Create new post |
-| PUT | `/posts/:id` | Update post |
-| DELETE | `/posts/:id` | Delete post |
-| POST | `/posts/:id/clap` | Add clap to post |
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/posts` | Get all posts (paginated, searchable) | No |
+| GET | `/posts/:id` | Get single post by ID | No |
+| GET | `/posts/by-slug/:slug` | Get single post by slug | No |
+| POST | `/posts` | Create new post (with thumbnail) | Yes |
+| PUT | `/posts/:id` | Update post | Yes |
+| DELETE | `/posts/:id` | Delete post | Yes |
+| POST | `/posts/:id/clap` | Add clap to post | No |
 
 ### Comments
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/posts/:id/comments` | Get comments for post |
-| POST | `/posts/:id/comments` | Create comment |
-| PUT | `/comments/:id` | Update comment |
-| DELETE | `/comments/:id` | Delete comment |
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/posts/:id/comments` | Get comments for post (nested) | No |
+| POST | `/posts/:id/comments` | Create comment (supports replies) | Yes |
+| PUT | `/comments/:id` | Update comment | Yes |
+| DELETE | `/comments/:id` | Delete comment (cascades to replies) | Yes |
+| POST | `/comments/:id/like` | Toggle like on comment | Yes |
 
 ### Users
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/users/profile-picture` | Upload profile picture |
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/users/profile-picture` | Upload profile picture | Yes |
+
+### Images
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/images/upload` | Upload content image for editor | Yes |
 
 ---
 
