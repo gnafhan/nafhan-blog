@@ -47,11 +47,12 @@ export default function NewPostPage() {
     content: string;
     description?: string;
     category?: string;
+    thumbnail?: File;
   }) => {
     try {
       const post = await postsApi.create(data);
-      // Redirect to the newly created post
-      router.push(`/posts/${post._id}`);
+      // Redirect to the newly created post using slug
+      router.push(`/posts/${post.slug}`);
     } catch (error) {
       // Handle error - could show a toast notification
       console.error("Failed to create post:", error);

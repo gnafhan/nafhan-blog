@@ -8,16 +8,44 @@ import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { TRANSFORMERS, $convertToMarkdownString, $convertFromMarkdownString } from '@lexical/markdown';
+import { TRANSFORMERS, $convertToMarkdownString, $convertFromMarkdownString, TextMatchTransformer } from '@lexical/markdown';
 import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import { ListNode, ListItemNode } from '@lexical/list';
 import { LinkNode, AutoLinkNode } from '@lexical/link';
 import { CodeNode, CodeHighlightNode } from '@lexical/code';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalEditor } from 'lexical';
+import { LexicalEditor, $getRoot, $createParagraphNode, LexicalNode } from 'lexical';
 import { ToolbarPlugin } from './toolbar-plugin';
+import { ImageNode, $createImageNode, $isImageNode } from './image-node';
+import { ImagePlugin } from './image-plugin';
 import { cn } from '@/lib/utils';
+
+// Custom markdown transformer for images
+const IMAGE_TRANSFORMER: TextMatchTransformer = {
+  dependencies: [ImageNode],
+  export: (node: LexicalNode) => {
+    if (!$isImageNode(node)) {
+      return null;
+    }
+    return `![${node.getAltText()}](${node.getSrc()})`;
+  },
+  importRegExp: /!\[([^\]]*)\]\(([^)]+)\)/,
+  regExp: /!\[([^\]]*)\]\(([^)]+)\)$/,
+  replace: (textNode, match) => {
+    const [, altText, src] = match;
+    const imageNode = $createImageNode({
+      altText: altText || '',
+      src,
+    });
+    textNode.replace(imageNode);
+  },
+  trigger: ')',
+  type: 'text-match',
+};
+
+// Combine default transformers with image transformer
+const CUSTOM_TRANSFORMERS = [...TRANSFORMERS, IMAGE_TRANSFORMER];
 
 export interface RichTextEditorRef {
   getContent: () => string;
@@ -55,6 +83,7 @@ const theme = {
     strikethrough: 'line-through',
     code: 'bg-muted px-1.5 py-0.5 rounded font-mono text-sm',
   },
+  image: 'editor-image-wrapper',
 };
 
 function InitialContentPlugin({ content }: { content?: string }) {
@@ -65,7 +94,41 @@ function InitialContentPlugin({ content }: { content?: string }) {
     if (content && !initializedRef.current) {
       initializedRef.current = true;
       editor.update(() => {
-        $convertFromMarkdownString(content, TRANSFORMERS);
+        // Clear existing content first
+        const root = $getRoot();
+        root.clear();
+        
+        // Parse markdown content with image support
+        // Handle images by converting markdown image syntax to ImageNodes
+        const lines = content.split('\n');
+        
+        let processedContent = '';
+        for (const line of lines) {
+          // Check if line contains only an image
+          const trimmedLine = line.trim();
+          const imageOnlyMatch = trimmedLine.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+          
+          if (imageOnlyMatch) {
+            // Process any content before this image
+            if (processedContent.trim()) {
+              $convertFromMarkdownString(processedContent, CUSTOM_TRANSFORMERS);
+              processedContent = '';
+            }
+            // Create image node directly
+            const [, altText, src] = imageOnlyMatch;
+            const imageNode = $createImageNode({ altText: altText || '', src });
+            const paragraph = $createParagraphNode();
+            paragraph.append(imageNode);
+            root.append(paragraph);
+          } else {
+            processedContent += line + '\n';
+          }
+        }
+        
+        // Process remaining content
+        if (processedContent.trim()) {
+          $convertFromMarkdownString(processedContent, CUSTOM_TRANSFORMERS);
+        }
       });
     }
   }, [editor, content]);
@@ -103,7 +166,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         
         let markdown = '';
         editorRef.current.getEditorState().read(() => {
-          markdown = $convertToMarkdownString(TRANSFORMERS);
+          markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
         });
         return markdown;
       },
@@ -124,6 +187,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         AutoLinkNode,
         CodeNode,
         CodeHighlightNode,
+        ImageNode,
       ],
       editable: !disabled,
     };
@@ -157,7 +221,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           <HistoryPlugin />
           <ListPlugin />
           <LinkPlugin />
-          <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+          <ImagePlugin />
+          <MarkdownShortcutPlugin transformers={CUSTOM_TRANSFORMERS} />
           <InitialContentPlugin content={initialContent} />
           <EditorRefPlugin editorRef={editorRef} />
         </div>

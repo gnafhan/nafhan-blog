@@ -12,13 +12,16 @@ import {
   CardContent,
   CardFooter,
 } from '@/components/ui/card';
+import { getImageUrl } from '@/lib/utils/image';
 
 interface Post {
   _id: string;
   title: string;
+  slug: string;
   content: string;
   description: string;
   category?: string;
+  thumbnail?: string;
   claps?: number;
   createdAt: string;
   updatedAt: string;
@@ -54,9 +57,10 @@ export function ProfilePostCard({ post, onDelete }: ProfilePostCardProps) {
   const categoryStyle = post.category ? categoryStyles[post.category] : null;
   const wordCount = post.content?.split(/\s+/).length || 0;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+  const thumbnailUrl = getImageUrl(post.thumbnail);
 
   const handleEdit = () => {
-    router.push(`/posts/${post._id}/edit`);
+    router.push(`/posts/${post.slug}/edit`);
   };
 
   const handleDelete = async () => {
@@ -65,13 +69,33 @@ export function ProfilePostCard({ post, onDelete }: ProfilePostCardProps) {
     try {
       await postsApi.delete(post._id);
       onDelete?.(post._id);
-    } catch (error) {
+    } catch {
       alert('Failed to delete post');
     }
   };
 
   return (
     <Card className="group hover:shadow-md transition-all duration-200 flex flex-col">
+      {/* Thumbnail */}
+      {thumbnailUrl ? (
+        <Link href={`/posts/${post.slug}`} className="block">
+          <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={thumbnailUrl}
+              alt={post.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        </Link>
+      ) : (
+        <Link href={`/posts/${post.slug}`} className="block">
+          <div className="aspect-video w-full bg-gradient-to-br from-primary/10 via-primary/5 to-muted flex items-center justify-center rounded-t-lg">
+            <span className="text-3xl opacity-50">📝</span>
+          </div>
+        </Link>
+      )}
+      
       <CardHeader className="pb-3">
         {/* Category & Date */}
         <div className="flex items-center justify-between gap-2 mb-2">
@@ -87,7 +111,7 @@ export function ProfilePostCard({ post, onDelete }: ProfilePostCardProps) {
         
         {/* Title */}
         <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
-          <Link href={`/posts/${post._id}`} className="hover:underline">
+          <Link href={`/posts/${post.slug}`} className="hover:underline">
             {post.title}
           </Link>
         </CardTitle>

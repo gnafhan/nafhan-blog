@@ -11,12 +11,18 @@ export interface Comment {
     email: string;
     profilePicture?: string;
   };
+  parentComment?: string;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface CommentWithReplies extends Comment {
+  replies: CommentWithReplies[];
+}
+
 export interface CreateCommentData {
   content: string;
+  parentCommentId?: string;
 }
 
 export interface UpdateCommentData {
@@ -25,12 +31,12 @@ export interface UpdateCommentData {
 
 // Comments API service
 export const commentsApi = {
-  // Get all comments for a post
-  getByPost: async (postId: string): Promise<Comment[]> => {
-    return apiClient.get<Comment[]>(`/posts/${postId}/comments`);
+  // Get all comments for a post (returns nested structure)
+  getByPost: async (postId: string): Promise<CommentWithReplies[]> => {
+    return apiClient.get<CommentWithReplies[]>(`/posts/${postId}/comments`);
   },
 
-  // Create new comment
+  // Create new comment (optionally as a reply to another comment)
   create: async (postId: string, data: CreateCommentData): Promise<Comment> => {
     return apiClient.post<Comment>(`/posts/${postId}/comments`, data);
   },
@@ -40,7 +46,7 @@ export const commentsApi = {
     return apiClient.put<Comment>(`/comments/${id}`, data);
   },
 
-  // Delete comment
+  // Delete comment (cascades to all replies)
   delete: async (id: string): Promise<void> => {
     return apiClient.delete(`/comments/${id}`);
   },

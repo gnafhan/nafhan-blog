@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RichTextEditor, RichTextEditorRef } from "@/components/editor/rich-text-editor";
+import { getImageUrl } from "@/lib/utils/image";
+import { ImagePlus, X, Upload } from "lucide-react";
 
 interface PostFormProps {
   initialData?: {
@@ -21,12 +23,14 @@ interface PostFormProps {
     content: string;
     description?: string;
     category?: string;
+    thumbnail?: string;
   };
   onSubmit: (data: {
     title: string;
     content: string;
     description?: string;
     category?: string;
+    thumbnail?: File;
   }) => Promise<void>;
   submitLabel?: string;
 }
@@ -55,7 +59,87 @@ export function PostForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
+  // Thumbnail state
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(
+    initialData?.thumbnail ? getImageUrl(initialData.thumbnail) : null
+  );
+  const [isDragging, setIsDragging] = useState(false);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  
   const editorRef = useRef<RichTextEditorRef>(null);
+
+  const validateImageFile = (file: File): string | null => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      return 'Only JPEG, PNG, WebP, and GIF images are allowed';
+    }
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return 'Image size must be less than 5MB';
+    }
+    return null;
+  };
+
+  const handleThumbnailSelect = useCallback((file: File) => {
+    const error = validateImageFile(file);
+    if (error) {
+      setErrors(prev => ({ ...prev, thumbnail: error }));
+      return;
+    }
+    
+    setErrors(prev => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { thumbnail: _thumbnail, ...rest } = prev;
+      return rest;
+    });
+    setThumbnailFile(file);
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setThumbnailPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleThumbnailSelect(file);
+    }
+  };
+
+  const handleThumbnailRemove = () => {
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      handleThumbnailSelect(file);
+    }
+  }, [handleThumbnailSelect]);
 
   const validate = (content: string) => {
     const newErrors: Record<string, string> = {};
@@ -91,6 +175,7 @@ export function PostForm({
         content: content.trim(),
         description: description.trim() || undefined,
         category: category || undefined,
+        thumbnail: thumbnailFile || undefined,
       });
     } catch (error) {
       console.error("Form submission error:", error);
@@ -195,6 +280,93 @@ export function PostForm({
               Clear
             </Button>
           </div>
+        )}
+      </div>
+
+      {/* Thumbnail Section */}
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">
+          Cover Image
+          <span className="text-muted-foreground font-normal text-sm ml-2">(optional)</span>
+        </Label>
+        
+        <div
+          className={`relative border-2 border-dashed rounded-lg transition-colors ${
+            isDragging 
+              ? 'border-primary bg-primary/5' 
+              : thumbnailPreview 
+                ? 'border-muted' 
+                : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {thumbnailPreview ? (
+            <div className="relative aspect-video">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={thumbnailPreview}
+                alt="Thumbnail preview"
+                className="w-full h-full object-cover rounded-lg"
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  className="gap-1.5"
+                >
+                  <Upload className="h-4 w-4" />
+                  Replace
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleThumbnailRemove}
+                  className="gap-1.5"
+                >
+                  <X className="h-4 w-4" />
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div 
+              className="flex flex-col items-center justify-center py-12 px-4 cursor-pointer"
+              onClick={() => thumbnailInputRef.current?.click()}
+            >
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">
+                {isDragging ? 'Drop image here' : 'Add a cover image'}
+              </p>
+              <p className="text-xs text-muted-foreground text-center">
+                Drag and drop or click to upload<br />
+                JPEG, PNG, WebP, GIF (max 5MB)
+              </p>
+            </div>
+          )}
+          
+          <input
+            ref={thumbnailInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={handleThumbnailChange}
+            className="hidden"
+            disabled={isSubmitting}
+          />
+        </div>
+        
+        {errors.thumbnail ? (
+          <p className="text-sm text-destructive">{errors.thumbnail}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            This image will appear at the top of your post and in post cards
+          </p>
         )}
       </div>
 
