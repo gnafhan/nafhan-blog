@@ -46,7 +46,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.blog-backend.rule=Host(`${BACKEND_SUBDOMAIN:-be-blog}.${DOMAIN:-nafhan.com}`)"
       - "traefik.http.routers.blog-backend.entrypoints=websecure"
-      - "traefik.http.routers.blog-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.blog-backend.tls.certresolver=${CERT_RESOLVER:-mytlschallenge}"
       - "traefik.http.services.blog-backend.loadbalancer.server.port=3000"
       - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
     healthcheck:
@@ -77,7 +77,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.blog-frontend.rule=Host(`${FRONTEND_SUBDOMAIN:-blog}.${DOMAIN:-nafhan.com}`)"
       - "traefik.http.routers.blog-frontend.entrypoints=websecure"
-      - "traefik.http.routers.blog-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.blog-frontend.tls.certresolver=${CERT_RESOLVER:-mytlschallenge}"
       - "traefik.http.services.blog-frontend.loadbalancer.server.port=3000"
       - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
 
