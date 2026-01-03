@@ -56,7 +56,7 @@ describe('Posts Properties (Property-Based Tests)', () => {
       const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email, password });
-      
+
       if (loginResponse.status === 200 || loginResponse.status === 201) {
         return {
           token: loginResponse.body.token,
@@ -66,7 +66,9 @@ describe('Posts Properties (Property-Based Tests)', () => {
     }
 
     // If we get here, something went wrong - throw an error with details
-    throw new Error(`Failed to create/login user: ${response.status} - ${JSON.stringify(response.body)}`);
+    throw new Error(
+      `Failed to create/login user: ${response.status} - ${JSON.stringify(response.body)}`,
+    );
   }
 
   /**
@@ -114,32 +116,39 @@ describe('Posts Properties (Property-Based Tests)', () => {
    */
   it('Property 7: For any post creation request with empty title or content, should return 400 with validation errors', async () => {
     const invalidPostArb = fc.oneof(
-      fc.record({ title: fc.constant(''), content: fc.string({ minLength: 1, maxLength: 100 }).filter(s => /^[\x20-\x7E]+$/.test(s)) }),
-      fc.record({ title: fc.string({ minLength: 1, maxLength: 100 }).filter(s => /^[\x20-\x7E]+$/.test(s)), content: fc.constant('') }),
+      fc.record({
+        title: fc.constant(''),
+        content: fc
+          .string({ minLength: 1, maxLength: 100 })
+          .filter((s) => /^[\x20-\x7E]+$/.test(s)),
+      }),
+      fc.record({
+        title: fc
+          .string({ minLength: 1, maxLength: 100 })
+          .filter((s) => /^[\x20-\x7E]+$/.test(s)),
+        content: fc.constant(''),
+      }),
       fc.record({ title: fc.constant(''), content: fc.constant('') }),
     );
 
     await fc.assert(
-      fc.asyncProperty(
-        invalidPostArb,
-        async (invalidPost) => {
-          // Use a unique email for each test run
-          const email = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
-          const { token } = await createUserAndGetToken(
-            'Test User',
-            email,
-            'password123',
-          );
+      fc.asyncProperty(invalidPostArb, async (invalidPost) => {
+        // Use a unique email for each test run
+        const email = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
+        const { token } = await createUserAndGetToken(
+          'Test User',
+          email,
+          'password123',
+        );
 
-          const response = await request(app.getHttpServer())
-            .post('/posts')
-            .set('Authorization', `Bearer ${token}`)
-            .send(invalidPost);
+        const response = await request(app.getHttpServer())
+          .post('/posts')
+          .set('Authorization', `Bearer ${token}`)
+          .send(invalidPost);
 
-          expect(response.status).toBe(400);
-          expect(response.body).toHaveProperty('message');
-        },
-      ),
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('message');
+      }),
       { numRuns: 100 },
     );
   });
@@ -169,9 +178,7 @@ describe('Posts Properties (Property-Based Tests)', () => {
         expect(response.body.data.length).toBeLessThanOrEqual(limit);
 
         // Verify totalPages calculation
-        const expectedTotalPages = Math.ceil(
-          response.body.meta.total / limit,
-        );
+        const expectedTotalPages = Math.ceil(response.body.meta.total / limit);
         expect(response.body.meta.totalPages).toBe(expectedTotalPages);
       }),
       { numRuns: 100 },
@@ -281,9 +288,9 @@ describe('Posts Properties (Property-Based Tests)', () => {
 
           expect(updateResponse.body.title).toBe(newTitle.trim());
           expect(updateResponse.body.content).toBe(content.trim());
-          expect(new Date(updateResponse.body.updatedAt).getTime()).toBeGreaterThan(
-            new Date(originalUpdatedAt).getTime(),
-          );
+          expect(
+            new Date(updateResponse.body.updatedAt).getTime(),
+          ).toBeGreaterThan(new Date(originalUpdatedAt).getTime());
         },
       ),
       { numRuns: 100 },
@@ -425,59 +432,56 @@ describe('Posts Properties (Property-Based Tests)', () => {
       .filter((s) => s.length >= 3);
 
     await fc.assert(
-      fc.asyncProperty(
-        searchTermArb,
-        async (searchTerm) => {
-          // Use a unique email for each test run
-          const email = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
-          const { token } = await createUserAndGetToken(
-            'Test User',
-            email,
-            'password123',
-          );
+      fc.asyncProperty(searchTermArb, async (searchTerm) => {
+        // Use a unique email for each test run
+        const email = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
+        const { token } = await createUserAndGetToken(
+          'Test User',
+          email,
+          'password123',
+        );
 
-          // Create a post with the search term in title
-          await request(app.getHttpServer())
-            .post('/posts')
-            .set('Authorization', `Bearer ${token}`)
-            .send({
-              title: `Post with ${searchTerm} in title`,
-              content: 'Some content',
-            })
-            .expect(201);
+        // Create a post with the search term in title
+        await request(app.getHttpServer())
+          .post('/posts')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            title: `Post with ${searchTerm} in title`,
+            content: 'Some content',
+          })
+          .expect(201);
 
-          // Create a post with the search term in content
-          await request(app.getHttpServer())
-            .post('/posts')
-            .set('Authorization', `Bearer ${token}`)
-            .send({
-              title: 'Another post',
-              content: `Content with ${searchTerm} here`,
-            })
-            .expect(201);
+        // Create a post with the search term in content
+        await request(app.getHttpServer())
+          .post('/posts')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            title: 'Another post',
+            content: `Content with ${searchTerm} here`,
+          })
+          .expect(201);
 
-          // Search for posts
-          const searchResponse = await request(app.getHttpServer())
-            .get('/posts')
-            .query({ search: searchTerm })
-            .expect(200);
+        // Search for posts
+        const searchResponse = await request(app.getHttpServer())
+          .get('/posts')
+          .query({ search: searchTerm })
+          .expect(200);
 
-          expect(searchResponse.body).toHaveProperty('data');
-          expect(searchResponse.body).toHaveProperty('meta');
-          expect(Array.isArray(searchResponse.body.data)).toBe(true);
+        expect(searchResponse.body).toHaveProperty('data');
+        expect(searchResponse.body).toHaveProperty('meta');
+        expect(Array.isArray(searchResponse.body.data)).toBe(true);
 
-          // Verify all results contain the search term (case-insensitive)
-          searchResponse.body.data.forEach((post: any) => {
-            const titleMatch = post.title
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase());
-            const contentMatch = post.content
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase());
-            expect(titleMatch || contentMatch).toBe(true);
-          });
-        },
-      ),
+        // Verify all results contain the search term (case-insensitive)
+        searchResponse.body.data.forEach((post: any) => {
+          const titleMatch = post.title
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+          const contentMatch = post.content
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+          expect(titleMatch || contentMatch).toBe(true);
+        });
+      }),
       { numRuns: 100 },
     );
   });

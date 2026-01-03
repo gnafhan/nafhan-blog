@@ -15,10 +15,7 @@ describe('Comments Properties (Property-Based Tests)', () => {
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        MongooseModule.forRoot(mongoUri),
-        AppModule,
-      ],
+      imports: [MongooseModule.forRoot(mongoUri), AppModule],
     })
       .overrideModule(AppModule)
       .useModule(AppModule)
@@ -46,8 +43,9 @@ describe('Comments Properties (Property-Based Tests)', () => {
    */
   it('Property 13: For any valid comment, creating it should associate with post and author', async () => {
     // Use safe alphanumeric strings to avoid HTTP parsing issues with special characters
-    const validContentArb = fc.string({ minLength: 1, maxLength: 1000 })
-      .filter(s => {
+    const validContentArb = fc
+      .string({ minLength: 1, maxLength: 1000 })
+      .filter((s) => {
         const trimmed = s.trim();
         // Only allow printable ASCII characters and common punctuation
         return trimmed.length > 0 && /^[\x20-\x7E]+$/.test(trimmed);
@@ -67,7 +65,8 @@ describe('Comments Properties (Property-Based Tests)', () => {
           .expect(201);
 
         const token = registerResponse.body.token;
-        const userId = registerResponse.body.user._id || registerResponse.body.user.id;
+        const userId =
+          registerResponse.body.user._id || registerResponse.body.user.id;
 
         // Create a post
         const postResponse = await request(app.getHttpServer())
@@ -169,8 +168,9 @@ describe('Comments Properties (Property-Based Tests)', () => {
    */
   it('Property 15: For any comment and valid update data by author, comment should be updated', async () => {
     // Use safe alphanumeric strings to avoid HTTP parsing issues with special characters
-    const safeStringArb = fc.string({ minLength: 1, maxLength: 1000 })
-      .filter(s => {
+    const safeStringArb = fc
+      .string({ minLength: 1, maxLength: 1000 })
+      .filter((s) => {
         const trimmed = s.trim();
         // Only allow printable ASCII characters and common punctuation
         return trimmed.length > 0 && /^[\x20-\x7E]+$/.test(trimmed);
@@ -179,55 +179,62 @@ describe('Comments Properties (Property-Based Tests)', () => {
     const updatedContentArb = safeStringArb;
 
     await fc.assert(
-      fc.asyncProperty(validContentArb, updatedContentArb, async (originalContent, updatedContent) => {
-        // Create a user and get token
-        const userEmail = `user-${Date.now()}-${Math.random()}@example.com`;
-        const registerResponse = await request(app.getHttpServer())
-          .post('/auth/register')
-          .send({
-            name: 'Test User',
-            email: userEmail,
-            password: 'password123',
-          })
-          .expect(201);
+      fc.asyncProperty(
+        validContentArb,
+        updatedContentArb,
+        async (originalContent, updatedContent) => {
+          // Create a user and get token
+          const userEmail = `user-${Date.now()}-${Math.random()}@example.com`;
+          const registerResponse = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({
+              name: 'Test User',
+              email: userEmail,
+              password: 'password123',
+            })
+            .expect(201);
 
-        const token = registerResponse.body.token;
+          const token = registerResponse.body.token;
 
-        // Create a post
-        const postResponse = await request(app.getHttpServer())
-          .post('/posts')
-          .set('Authorization', `Bearer ${token}`)
-          .send({
-            title: 'Test Post',
-            content: 'Test content',
-          })
-          .expect(201);
+          // Create a post
+          const postResponse = await request(app.getHttpServer())
+            .post('/posts')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+              title: 'Test Post',
+              content: 'Test content',
+            })
+            .expect(201);
 
-        const postId = postResponse.body._id;
+          const postId = postResponse.body._id;
 
-        // Create a comment
-        const commentResponse = await request(app.getHttpServer())
-          .post(`/posts/${postId}/comments`)
-          .set('Authorization', `Bearer ${token}`)
-          .send({ content: originalContent })
-          .expect(201);
+          // Create a comment
+          const commentResponse = await request(app.getHttpServer())
+            .post(`/posts/${postId}/comments`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ content: originalContent })
+            .expect(201);
 
-        const commentId = commentResponse.body._id;
-        const originalUpdatedAt = commentResponse.body.updatedAt;
+          const commentId = commentResponse.body._id;
+          const originalUpdatedAt = commentResponse.body.updatedAt;
 
-        // Update the comment
-        const updateResponse = await request(app.getHttpServer())
-          .put(`/comments/${commentId}`)
-          .set('Authorization', `Bearer ${token}`)
-          .send({ content: updatedContent })
-          .expect(200);
+          // Update the comment
+          const updateResponse = await request(app.getHttpServer())
+            .put(`/comments/${commentId}`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ content: updatedContent })
+            .expect(200);
 
-        expect(updateResponse.body).toHaveProperty('content', updatedContent.trim());
-        expect(updateResponse.body._id).toBe(commentId);
-        expect(new Date(updateResponse.body.updatedAt).getTime()).toBeGreaterThanOrEqual(
-          new Date(originalUpdatedAt).getTime(),
-        );
-      }),
+          expect(updateResponse.body).toHaveProperty(
+            'content',
+            updatedContent.trim(),
+          );
+          expect(updateResponse.body._id).toBe(commentId);
+          expect(
+            new Date(updateResponse.body.updatedAt).getTime(),
+          ).toBeGreaterThanOrEqual(new Date(originalUpdatedAt).getTime());
+        },
+      ),
       { numRuns: 100 },
     );
   });
@@ -238,8 +245,9 @@ describe('Comments Properties (Property-Based Tests)', () => {
    */
   it('Property 16: For any comment by user A, user B should not be able to update or delete it', async () => {
     // Use safe alphanumeric strings to avoid HTTP parsing issues with special characters
-    const validContentArb = fc.string({ minLength: 1, maxLength: 1000 })
-      .filter(s => {
+    const validContentArb = fc
+      .string({ minLength: 1, maxLength: 1000 })
+      .filter((s) => {
         const trimmed = s.trim();
         // Only allow printable ASCII characters and common punctuation
         return trimmed.length > 0 && /^[\x20-\x7E]+$/.test(trimmed);

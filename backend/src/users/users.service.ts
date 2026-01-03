@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { Post, PostDocument } from '../posts/schemas/post.schema';
 
@@ -19,7 +19,11 @@ export class UsersService {
     return this.userModel.findOne({ email }).select('+password').exec();
   }
 
-  async create(userData: { name: string; email: string; password: string }): Promise<User> {
+  async create(userData: {
+    name: string;
+    email: string;
+    password: string;
+  }): Promise<User> {
     const newUser = new this.userModel(userData);
     return newUser.save();
   }
@@ -29,21 +33,21 @@ export class UsersService {
     if (!user) {
       return null;
     }
-    
+
     // Ensure userId is a string for comparison
     const userIdStr = userId.toString();
-    
+
     // Query posts - use $expr with $toString to handle both string and ObjectId author fields
     const posts = await this.postModel
       .find({
         $expr: {
-          $eq: [{ $toString: '$author' }, userIdStr]
-        }
+          $eq: [{ $toString: '$author' }, userIdStr],
+        },
       })
       .populate('author', 'name email profilePicture')
       .sort({ createdAt: -1 })
       .exec();
-    
+
     const userObj = (user as any).toObject();
     return {
       ...userObj,
@@ -51,17 +55,22 @@ export class UsersService {
     };
   }
 
-  async updateProfilePicture(userId: string, profilePictureUrl: string): Promise<User> {
-    const user = await this.userModel.findByIdAndUpdate(
-      userId,
-      { profilePicture: profilePictureUrl },
-      { new: true },
-    ).exec();
-    
+  async updateProfilePicture(
+    userId: string,
+    profilePictureUrl: string,
+  ): Promise<User> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        { profilePicture: profilePictureUrl },
+        { new: true },
+      )
+      .exec();
+
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     return user;
   }
 }

@@ -14,7 +14,7 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(password, user.password))) {
       const userObj = (user as any).toObject();
-      const { password: _, ...result } = userObj;
+      const { password: _pass, ...result } = userObj;
       return result;
     }
     return null;
@@ -28,8 +28,11 @@ export class AuthService {
     });
 
     const userObj = (user as any).toObject();
-    const { password: _, ...userWithoutPassword } = userObj;
-    const token = this.jwtService.sign({ sub: userObj._id.toString(), email: user.email });
+    const { password: _pass, ...userWithoutPassword } = userObj;
+    const token = this.jwtService.sign({
+      sub: userObj._id.toString(),
+      email: user.email,
+    });
 
     return {
       user: userWithoutPassword,

@@ -15,10 +15,7 @@ describe('Auth Properties (Property-Based Tests)', () => {
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        MongooseModule.forRoot(mongoUri),
-        AppModule,
-      ],
+      imports: [MongooseModule.forRoot(mongoUri), AppModule],
     })
       .overrideModule(AppModule)
       .useModule(AppModule)
@@ -50,25 +47,33 @@ describe('Auth Properties (Property-Based Tests)', () => {
     const validPasswordArb = fc.string({ minLength: 6, maxLength: 100 });
 
     await fc.assert(
-      fc.asyncProperty(validNameArb, validEmailArb, validPasswordArb, async (name, email, password) => {
-        const response = await request(app.getHttpServer())
-          .post('/auth/register')
-          .send({ name, email, password })
-          .expect((res) => {
-            // Should return 201 or 409 (if email already exists from previous test)
-            return res.status === 201 || res.status === 409;
-          });
+      fc.asyncProperty(
+        validNameArb,
+        validEmailArb,
+        validPasswordArb,
+        async (name, email, password) => {
+          const response = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({ name, email, password })
+            .expect((res) => {
+              // Should return 201 or 409 (if email already exists from previous test)
+              return res.status === 201 || res.status === 409;
+            });
 
-        if (response.status === 201) {
-          expect(response.body).toHaveProperty('user');
-          expect(response.body).toHaveProperty('token');
-          expect(response.body.user).toHaveProperty('name', name);
-          expect(response.body.user).toHaveProperty('email', email.toLowerCase());
-          expect(response.body.user).not.toHaveProperty('password');
-          expect(typeof response.body.token).toBe('string');
-          expect(response.body.token.length).toBeGreaterThan(0);
-        }
-      }),
+          if (response.status === 201) {
+            expect(response.body).toHaveProperty('user');
+            expect(response.body).toHaveProperty('token');
+            expect(response.body.user).toHaveProperty('name', name);
+            expect(response.body.user).toHaveProperty(
+              'email',
+              email.toLowerCase(),
+            );
+            expect(response.body.user).not.toHaveProperty('password');
+            expect(typeof response.body.token).toBe('string');
+            expect(response.body.token.length).toBeGreaterThan(0);
+          }
+        },
+      ),
       { numRuns: 10 },
     );
   });
@@ -85,7 +90,9 @@ describe('Auth Properties (Property-Based Tests)', () => {
     const invalidEmailArb = fc.oneof(
       fc.constant('not-an-email'),
       fc.constant(''),
-      fc.string({ minLength: 1, maxLength: 20 }).filter(s => !s.includes('@')),
+      fc
+        .string({ minLength: 1, maxLength: 20 })
+        .filter((s) => !s.includes('@')),
     );
     const invalidPasswordArb = fc.oneof(
       fc.constant(''), // empty password
@@ -95,9 +102,21 @@ describe('Auth Properties (Property-Based Tests)', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.oneof(
-          fc.record({ name: invalidNameArb, email: fc.emailAddress(), password: fc.string({ minLength: 6 }) }),
-          fc.record({ name: fc.string({ minLength: 2 }), email: invalidEmailArb, password: fc.string({ minLength: 6 }) }),
-          fc.record({ name: fc.string({ minLength: 2 }), email: fc.emailAddress(), password: invalidPasswordArb }),
+          fc.record({
+            name: invalidNameArb,
+            email: fc.emailAddress(),
+            password: fc.string({ minLength: 6 }),
+          }),
+          fc.record({
+            name: fc.string({ minLength: 2 }),
+            email: invalidEmailArb,
+            password: fc.string({ minLength: 6 }),
+          }),
+          fc.record({
+            name: fc.string({ minLength: 2 }),
+            email: fc.emailAddress(),
+            password: invalidPasswordArb,
+          }),
         ),
         async (invalidData) => {
           const response = await request(app.getHttpServer())
@@ -122,30 +141,35 @@ describe('Auth Properties (Property-Based Tests)', () => {
     const validPasswordArb = fc.string({ minLength: 6, maxLength: 100 });
 
     await fc.assert(
-      fc.asyncProperty(validNameArb, validEmailArb, validPasswordArb, async (name, email, password) => {
-        // First register the user
-        const registerResponse = await request(app.getHttpServer())
-          .post('/auth/register')
-          .send({ name, email, password });
+      fc.asyncProperty(
+        validNameArb,
+        validEmailArb,
+        validPasswordArb,
+        async (name, email, password) => {
+          // First register the user
+          const registerResponse = await request(app.getHttpServer())
+            .post('/auth/register')
+            .send({ name, email, password });
 
-        // Skip if user already exists
-        if (registerResponse.status === 409) {
-          return true;
-        }
+          // Skip if user already exists
+          if (registerResponse.status === 409) {
+            return true;
+          }
 
-        expect(registerResponse.status).toBe(201);
+          expect(registerResponse.status).toBe(201);
 
-        // Then try to login
-        const loginResponse = await request(app.getHttpServer())
-          .post('/auth/login')
-          .send({ email, password })
-          .expect(201);
+          // Then try to login
+          const loginResponse = await request(app.getHttpServer())
+            .post('/auth/login')
+            .send({ email, password })
+            .expect(201);
 
-        expect(loginResponse.body).toHaveProperty('user');
-        expect(loginResponse.body).toHaveProperty('token');
-        expect(typeof loginResponse.body.token).toBe('string');
-        expect(loginResponse.body.token.length).toBeGreaterThan(0);
-      }),
+          expect(loginResponse.body).toHaveProperty('user');
+          expect(loginResponse.body).toHaveProperty('token');
+          expect(typeof loginResponse.body.token).toBe('string');
+          expect(loginResponse.body.token.length).toBeGreaterThan(0);
+        },
+      ),
       { numRuns: 10 },
     );
   });

@@ -44,7 +44,11 @@ export class CommentsController {
     @Request() req: any,
     @Body() updateCommentDto: UpdateCommentDto,
   ) {
-    return this.commentsService.update(id, req.user._id.toString(), updateCommentDto);
+    return this.commentsService.update(
+      id,
+      req.user._id.toString(),
+      updateCommentDto,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

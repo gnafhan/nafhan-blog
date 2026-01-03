@@ -29,7 +29,8 @@ export class UsersController {
           file: Express.Multer.File,
           callback: (error: Error | null, filename: string) => void,
         ) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
           callback(null, `profile-${uniqueSuffix}${ext}`);
         },

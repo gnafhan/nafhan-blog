@@ -31,11 +31,13 @@ export class PostsService {
   async create(userId: string, createPostDto: CreatePostDto): Promise<Post> {
     const trimmedTitle = createPostDto.title.trim();
     const trimmedContent = createPostDto.content.trim();
-    
+
     if (!trimmedTitle || !trimmedContent) {
-      throw new ForbiddenException('Title and content cannot be empty or whitespace only');
+      throw new ForbiddenException(
+        'Title and content cannot be empty or whitespace only',
+      );
     }
-    
+
     const newPost = new this.postModel({
       title: trimmedTitle,
       content: trimmedContent,
@@ -52,11 +54,11 @@ export class PostsService {
 
     // Build filter
     const filter: Record<string, unknown> = {};
-    
+
     if (search) {
       filter.$text = { $search: search };
     }
-    
+
     if (category) {
       filter.category = category;
     }
@@ -124,14 +126,18 @@ export class PostsService {
     if (updatePostDto.title) {
       const trimmedTitle = updatePostDto.title.trim();
       if (!trimmedTitle) {
-        throw new ForbiddenException('Title cannot be empty or whitespace only');
+        throw new ForbiddenException(
+          'Title cannot be empty or whitespace only',
+        );
       }
       post.title = trimmedTitle;
     }
     if (updatePostDto.content) {
       const trimmedContent = updatePostDto.content.trim();
       if (!trimmedContent) {
-        throw new ForbiddenException('Content cannot be empty or whitespace only');
+        throw new ForbiddenException(
+          'Content cannot be empty or whitespace only',
+        );
       }
       post.content = trimmedContent;
     }
@@ -141,7 +147,7 @@ export class PostsService {
     if (updatePostDto.category !== undefined) {
       post.category = updatePostDto.category;
     }
-    
+
     post.updatedAt = new Date();
     return post.save();
   }

@@ -21,18 +21,20 @@ export class CommentsService {
     createCommentDto: CreateCommentDto,
   ): Promise<Comment> {
     const trimmedContent = createCommentDto.content.trim();
-    
+
     if (!trimmedContent) {
-      throw new ForbiddenException('Content cannot be empty or whitespace only');
+      throw new ForbiddenException(
+        'Content cannot be empty or whitespace only',
+      );
     }
-    
+
     const comment = new this.commentModel({
       content: trimmedContent,
       post: new Types.ObjectId(postId),
       author: new Types.ObjectId(userId),
     });
     const savedComment = await comment.save();
-    
+
     // Populate author before returning
     return this.commentModel
       .findById(savedComment._id)
@@ -60,22 +62,22 @@ export class CommentsService {
     }
 
     if (comment.author.toString() !== userId) {
-      throw new ForbiddenException(
-        'You can only modify your own comments',
-      );
+      throw new ForbiddenException('You can only modify your own comments');
     }
 
     if (updateCommentDto.content) {
       const trimmedContent = updateCommentDto.content.trim();
       if (!trimmedContent) {
-        throw new ForbiddenException('Content cannot be empty or whitespace only');
+        throw new ForbiddenException(
+          'Content cannot be empty or whitespace only',
+        );
       }
       comment.content = trimmedContent;
     }
-    
+
     comment.updatedAt = new Date();
     await comment.save();
-    
+
     // Populate author before returning
     return this.commentModel
       .findById(id)
@@ -91,9 +93,7 @@ export class CommentsService {
     }
 
     if (comment.author.toString() !== userId) {
-      throw new ForbiddenException(
-        'You can only delete your own comments',
-      );
+      throw new ForbiddenException('You can only delete your own comments');
     }
 
     await this.commentModel.findByIdAndDelete(id).exec();
