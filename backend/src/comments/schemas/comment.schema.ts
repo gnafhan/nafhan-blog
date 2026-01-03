@@ -19,6 +19,9 @@ export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'Comment', default: null })
   parentComment: Types.ObjectId | Comment | null;
 
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  likes: Types.ObjectId[];
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 

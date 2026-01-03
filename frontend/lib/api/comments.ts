@@ -12,6 +12,8 @@ export interface Comment {
     profilePicture?: string;
   };
   parentComment?: string;
+  likes: string[];
+  likesCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +29,12 @@ export interface CreateCommentData {
 
 export interface UpdateCommentData {
   content: string;
+}
+
+export interface LikeResponse {
+  likes: string[];
+  likesCount: number;
+  liked: boolean;
 }
 
 // Comments API service
@@ -49,5 +57,10 @@ export const commentsApi = {
   // Delete comment (cascades to all replies)
   delete: async (id: string): Promise<void> => {
     return apiClient.delete(`/comments/${id}`);
+  },
+
+  // Toggle like on comment
+  toggleLike: async (id: string): Promise<LikeResponse> => {
+    return apiClient.post<LikeResponse>(`/comments/${id}/like`, {});
   },
 };

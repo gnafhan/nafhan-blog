@@ -57,4 +57,10 @@ export class CommentsController {
     await this.commentsService.delete(id, req.user._id.toString());
     return { message: 'Comment deleted successfully' };
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('comments/:id/like')
+  async toggleLike(@Param('id') id: string, @Request() req: any) {
+    return this.commentsService.toggleLike(id, req.user._id.toString());
+  }
 }

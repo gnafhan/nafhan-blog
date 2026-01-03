@@ -21,6 +21,8 @@ export interface CommentWithReplies {
     profilePicture?: string;
   };
   parentComment: Types.ObjectId | null;
+  likes: Types.ObjectId[];
+  likesCount: number;
   createdAt: Date;
   updatedAt: Date;
   replies: CommentWithReplies[];
@@ -98,8 +100,11 @@ export class CommentsService {
     // First pass: create map of all comments with empty replies array
     comments.forEach((comment) => {
       const commentObj = comment.toObject();
+      const likes = commentObj.likes || [];
       map.set(commentObj._id.toString(), {
         ...commentObj,
+        likes,
+        likesCount: likes.length,
         replies: [],
       } as CommentWithReplies);
     });
@@ -203,5 +208,40 @@ export class CommentsService {
     await this.commentModel
       .deleteMany({ post: new Types.ObjectId(postId) })
       .exec();
+  }
+
+  async toggleLike(
+    commentId: string,
+    userId: string,
+  ): Promise<{ likes: string[]; likesCount: number; liked: boolean }> {
+    const comment = await this.commentModel.findById(commentId).exec();
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    const userObjectId = new Types.ObjectId(userId);
+    const likes = comment.likes || [];
+    const userLikeIndex = likes.findIndex((id) => id.toString() === userId);
+
+    let liked: boolean;
+    if (userLikeIndex === -1) {
+      // User hasn't liked, add like
+      likes.push(userObjectId);
+      liked = true;
+    } else {
+      // User already liked, remove like
+      likes.splice(userLikeIndex, 1);
+      liked = false;
+    }
+
+    comment.likes = likes;
+    await comment.save();
+
+    return {
+      likes: likes.map((id) => id.toString()),
+      likesCount: likes.length,
+      liked,
+    };
   }
 }

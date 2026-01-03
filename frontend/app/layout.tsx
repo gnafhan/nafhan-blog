@@ -25,15 +25,9 @@ export const metadata: Metadata = {
   keywords: ["blog", "writing", "stories", "articles", "technology", "programming"],
   authors: [{ name: "NafhanBlog Team" }],
   icons: {
-    icon: [
-      { url: "/logo.png", sizes: "any" },
-      { url: "/logo.png", type: "image/png", sizes: "32x32" },
-      { url: "/logo.png", type: "image/png", sizes: "16x16" },
-    ],
+    icon: "/logo.png",
     shortcut: "/logo.png",
-    apple: [
-      { url: "/logo.png", sizes: "180x180", type: "image/png" },
-    ],
+    apple: "/logo.png",
   },
   openGraph: {
     type: "website",
