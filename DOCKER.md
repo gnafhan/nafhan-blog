@@ -24,7 +24,7 @@ Services will be available at:
 - Backend API: http://localhost:3000
 - MongoDB: localhost:27017
 
-### Production Mode
+### Production Mode (Local)
 
 ```bash
 # Copy and configure environment variables
@@ -34,6 +34,45 @@ cp .env.docker .env
 # Then start all services
 docker-compose up --build -d
 ```
+
+### Production Mode with Traefik (Recommended)
+
+For production deployment with SSL and reverse proxy using Traefik:
+
+```bash
+# 1. Copy and configure environment variables
+cp .env.docker .env
+
+# 2. Edit .env with your production values
+nano .env
+```
+
+Required environment variables for Traefik:
+```env
+# Domain Configuration
+DOMAIN=nafhan.com
+FRONTEND_SUBDOMAIN=blog
+BACKEND_SUBDOMAIN=be-blog
+
+# Traefik Network (must match your Traefik setup)
+TRAEFIK_NETWORK=traefik_network
+
+# Security - CHANGE THESE!
+MONGO_ROOT_PASSWORD=your-secure-password
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+```
+
+```bash
+# 3. Ensure Traefik network exists
+docker network create traefik_network || true
+
+# 4. Start all services
+docker-compose -f docker-compose.prod.yml up --build -d
+```
+
+Services will be available at:
+- Frontend: https://blog.nafhan.com (or your configured subdomain)
+- Backend API: https://be-blog.nafhan.com (or your configured subdomain)
 
 ## Services
 

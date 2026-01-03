@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   // output: 'standalone',
   images: {
     remotePatterns: [
+      // Development
       {
         protocol: 'http',
         hostname: 'localhost',
@@ -21,6 +22,12 @@ const nextConfig: NextConfig = {
         protocol: 'http',
         hostname: 'backend',
         port: '3000',
+        pathname: '/uploads/**',
+      },
+      // Production - allow any subdomain of nafhan.com
+      {
+        protocol: 'https',
+        hostname: '*.nafhan.com',
         pathname: '/uploads/**',
       },
     ],
