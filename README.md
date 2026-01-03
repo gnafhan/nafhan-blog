@@ -15,6 +15,17 @@
 
 ---
 
+## 🌐 Live Demo
+
+This project is deployed on Ubuntu VPS:
+
+| Service | URL |
+|---------|-----|
+| **Frontend** | [https://blog.nafhan.com/](https://blog.nafhan.com/) |
+| **Backend API** | [https://be-blog.nafhan.com/](https://be-blog.nafhan.com/) |
+
+---
+
 ## ✨ Features
 
 ### User Management
