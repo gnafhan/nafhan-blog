@@ -1,7 +1,7 @@
-# BlogHub
+# NafhanBlog
 
 <div align="center">
-  <img src="frontend/public/logo.png" alt="BlogHub Logo" width="120" height="120">
+  <img src="frontend/public/logo.png" alt="NafhanBlog Logo" width="120" height="120">
   
   <h3>A Modern Full-Stack Blog Platform</h3>
   <p>Share your stories, ideas, and knowledge with the world</p>
@@ -78,7 +78,7 @@
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd bloghub
+   cd NafhanBlog
    ```
 
 2. **Start with Docker Compose (Development)**
@@ -123,7 +123,7 @@ npm run dev
 ## 📁 Project Structure
 
 ```
-bloghub/
+NafhanBlog/
 ├── frontend/                 # Next.js frontend application
 │   ├── app/                  # App Router pages
 │   │   ├── auth/             # Authentication pages
