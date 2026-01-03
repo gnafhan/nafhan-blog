@@ -1,23 +1,44 @@
 'use client';
 
 import { useState } from 'react';
-import { Comment } from '@/lib/api/comments';
+import { CommentWithReplies, commentsApi } from '@/lib/api/comments';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { getImageUrl, getInitials } from '@/lib/utils/image';
+import { MessageCircle, ChevronDown, ChevronUp, Heart } from 'lucide-react';
 
 interface CommentItemProps {
-  comment: Comment;
+  comment: CommentWithReplies;
+  depth?: number;
+  maxVisibleDepth?: number;
+  onReply: (parentId: string, content: string) => Promise<void>;
   onUpdate: (id: string, content: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onLikeUpdate?: (commentId: string, likes: string[], likesCount: number) => void;
 }
 
-export function CommentItem({ comment, onUpdate, onDelete }: CommentItemProps) {
+export function CommentItem({ 
+  comment, 
+  depth = 0, 
+  maxVisibleDepth = 3,
+  onReply, 
+  onUpdate, 
+  onDelete,
+  onLikeUpdate 
+}: CommentItemProps) {
   const { user, isAuthenticated } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
+  const [showReplies, setShowReplies] = useState(depth < maxVisibleDepth);
+  const [likesCount, setLikesCount] = useState(comment.likesCount || 0);
+  const [isLiked, setIsLiked] = useState(
+    user?.id ? (comment.likes || []).includes(user.id) : false
+  );
+  const [isLiking, setIsLiking] = useState(false);
 
   // Safely access author properties with fallbacks
   const authorName = comment.author?.name || 'Unknown';
@@ -67,8 +88,54 @@ export function CommentItem({ comment, onUpdate, onDelete }: CommentItemProps) {
     setIsEditing(false);
   };
 
+  const handleReply = async () => {
+    if (!replyContent.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await onReply(comment._id, replyContent);
+      setReplyContent('');
+      setIsReplying(false);
+      setShowReplies(true); // Show replies after adding one
+    } catch (error) {
+      console.error('Failed to post reply:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelReply = () => {
+    setReplyContent('');
+    setIsReplying(false);
+  };
+
+  const handleLike = async () => {
+    if (!isAuthenticated || isLiking) return;
+
+    setIsLiking(true);
+    try {
+      const response = await commentsApi.toggleLike(comment._id);
+      setLikesCount(response.likesCount);
+      setIsLiked(response.liked);
+      if (onLikeUpdate) {
+        onLikeUpdate(comment._id, response.likes, response.likesCount);
+      }
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const hasReplies = comment.replies && comment.replies.length > 0;
+  const replyCount = comment.replies?.length || 0;
+
+  // Calculate indentation based on depth (max 3 levels of visual indentation)
+  const indentClass = depth > 0 ? 'ml-6 md:ml-10 pl-4 border-l-2 border-muted' : '';
+
   return (
-    <div className="flex gap-4 py-6 border-b last:border-b-0">
+    <div className={indentClass}>
+      <div className="flex gap-4 py-4">
       {/* Avatar */}
       {authorProfilePicture ? (
         <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
@@ -153,11 +220,123 @@ export function CommentItem({ comment, onUpdate, onDelete }: CommentItemProps) {
             </div>
           </div>
         ) : (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-            {comment.content}
-          </p>
+          <>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {comment.content}
+            </p>
+            
+            {/* Reply Button */}
+            {isAuthenticated && (
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLike}
+                  disabled={isLiking}
+                  className={`h-7 px-2 text-xs gap-1 ${
+                    isLiked 
+                      ? 'text-red-500 hover:text-red-600' 
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-current' : ''}`} />
+                  {likesCount > 0 && <span>{likesCount}</span>}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsReplying(!isReplying)}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Reply
+                </Button>
+              </div>
+            )}
+            {/* Show likes count for non-authenticated users */}
+            {!isAuthenticated && likesCount > 0 && (
+              <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+                <Heart className="h-3.5 w-3.5" />
+                <span>{likesCount}</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Inline Reply Form */}
+        {isReplying && (
+          <div className="mt-4 space-y-3">
+            <Textarea
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+              placeholder="Write a reply..."
+              rows={3}
+              disabled={isSubmitting}
+              className="text-sm resize-none"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleReply}
+                disabled={isSubmitting || !replyContent.trim()}
+              >
+                {isSubmitting ? 'Posting...' : 'Reply'}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCancelReply}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
+
+    {/* Nested Replies */}
+    {hasReplies && (
+      <div className="mt-2">
+        {/* Show/Hide Replies Toggle */}
+        {depth >= maxVisibleDepth - 1 && replyCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowReplies(!showReplies)}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1 mb-2"
+          >
+            {showReplies ? (
+              <>
+                <ChevronUp className="h-3.5 w-3.5" />
+                Hide {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3.5 w-3.5" />
+                Show {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Render Replies */}
+        {showReplies && comment.replies.map((reply) => (
+          <CommentItem
+            key={reply._id}
+            comment={reply}
+            depth={depth + 1}
+            maxVisibleDepth={maxVisibleDepth}
+            onReply={onReply}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onLikeUpdate={onLikeUpdate}
+          />
+        ))}
+      </div>
+    )}
+  </div>
   );
 }

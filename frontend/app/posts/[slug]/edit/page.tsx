@@ -9,7 +9,7 @@ import { postsApi, Post } from "@/lib/api/posts";
 export default function EditPostPage() {
   const router = useRouter();
   const params = useParams();
-  const postId = params.id as string;
+  const slug = params.slug as string;
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [post, setPost] = useState<Post | null>(null);
@@ -18,14 +18,14 @@ export default function EditPostPage() {
   const hasRedirected = useRef(false);
   const hasFetched = useRef(false);
 
-  // Fetch post data - only once
+  // Fetch post data by slug - only once
   useEffect(() => {
-    if (hasFetched.current || !postId) return;
+    if (hasFetched.current || !slug) return;
     
     const fetchPost = async () => {
       hasFetched.current = true;
       try {
-        const postData = await postsApi.getById(postId);
+        const postData = await postsApi.getBySlug(slug);
         setPost(postData);
       } catch (err) {
         console.error("Failed to fetch post:", err);
@@ -40,7 +40,7 @@ export default function EditPostPage() {
     };
 
     fetchPost();
-  }, [postId]);
+  }, [slug]);
 
   // Handle all redirects in a single effect to prevent loops
   useEffect(() => {
@@ -52,17 +52,17 @@ export default function EditPostPage() {
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
       hasRedirected.current = true;
-      router.replace(`/auth/login?redirect=/posts/${postId}/edit`);
+      router.replace(`/auth/login?redirect=/posts/${slug}/edit`);
       return;
     }
 
     // Check if user is the author
     if (post && user && post.author._id !== user.id) {
       hasRedirected.current = true;
-      router.replace(`/posts/${postId}`);
+      router.replace(`/posts/${slug}`);
       return;
     }
-  }, [isAuthenticated, authLoading, isLoading, post, user, router, postId]);
+  }, [isAuthenticated, authLoading, isLoading, post, user, router, slug]);
 
   // Show loading state only on initial load
   if (authLoading || isLoading) {
@@ -105,11 +105,12 @@ export default function EditPostPage() {
     content: string;
     description?: string;
     category?: string;
+    thumbnail?: File;
   }) => {
     try {
-      await postsApi.update(postId, data);
-      // Redirect to the updated post
-      router.push(`/posts/${postId}`);
+      await postsApi.update(post._id, data);
+      // Redirect to the updated post using slug
+      router.push(`/posts/${post.slug}`);
     } catch (error) {
       // Handle error - could show a toast notification
       console.error("Failed to update post:", error);
@@ -133,6 +134,7 @@ export default function EditPostPage() {
             content: post.content,
             description: post.description,
             category: post.category,
+            thumbnail: post.thumbnail,
           }}
           onSubmit={handleSubmit}
           submitLabel="Update Post"

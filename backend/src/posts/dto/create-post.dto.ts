@@ -30,4 +30,7 @@ export class CreatePostDto {
   @IsString()
   @IsOptional()
   category?: string;
+
+  // Note: thumbnail is handled via file upload (multipart form data)
+  // The thumbnail URL will be set by the controller after file upload
 }

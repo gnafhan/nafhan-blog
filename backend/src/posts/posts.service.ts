@@ -10,6 +10,7 @@ import { Comment, CommentDocument } from '../comments/schemas/comment.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { QueryPostsDto } from './dto/query-posts.dto';
+import { generateSlug, ensureUniqueSlug } from './slug.util';
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -28,7 +29,11 @@ export class PostsService {
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
   ) {}
 
-  async create(userId: string, createPostDto: CreatePostDto): Promise<Post> {
+  async create(
+    userId: string,
+    createPostDto: CreatePostDto,
+    thumbnailUrl?: string | null,
+  ): Promise<Post> {
     const trimmedTitle = createPostDto.title.trim();
     const trimmedContent = createPostDto.content.trim();
 
@@ -38,11 +43,17 @@ export class PostsService {
       );
     }
 
+    // Generate unique slug from title
+    const baseSlug = generateSlug(trimmedTitle);
+    const slug = await ensureUniqueSlug(baseSlug, this.postModel);
+
     const newPost = new this.postModel({
       title: trimmedTitle,
       content: trimmedContent,
       description: createPostDto.description,
       category: createPostDto.category,
+      slug,
+      thumbnail: thumbnailUrl || null,
       author: new Types.ObjectId(userId), // Store as ObjectId, not string
     });
     return newPost.save();
@@ -106,10 +117,24 @@ export class PostsService {
     return post;
   }
 
+  async findBySlug(slug: string): Promise<Post> {
+    const post = await this.postModel
+      .findOne({ slug })
+      .populate('author', 'name email profilePicture')
+      .exec();
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    return post;
+  }
+
   async update(
     id: string,
     userId: string,
     updatePostDto: UpdatePostDto,
+    thumbnailUrl?: string | null,
   ): Promise<Post> {
     const post = await this.postModel.findById(id).exec();
 
@@ -146,6 +171,11 @@ export class PostsService {
     }
     if (updatePostDto.category !== undefined) {
       post.category = updatePostDto.category;
+    }
+
+    // Handle thumbnail update
+    if (thumbnailUrl !== undefined) {
+      post.thumbnail = thumbnailUrl;
     }
 
     post.updatedAt = new Date();

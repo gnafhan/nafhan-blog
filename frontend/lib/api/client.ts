@@ -107,6 +107,16 @@ class ApiClient {
     });
     return response.data;
   }
+
+  // PUT request with FormData (for file uploads)
+  async putFormData<T>(url: string, formData: FormData): Promise<T> {
+    const response = await this.client.put<T>(url, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
 }
 
 // Export singleton instance
