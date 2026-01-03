@@ -50,7 +50,7 @@ services:
       - "traefik.http.services.blog-backend.loadbalancer.server.port=3000"
       - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
